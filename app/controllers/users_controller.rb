@@ -4,18 +4,37 @@ class UsersController < ApplicationController
   before_action :validate_login_params!, only: :login
   before_action :authenticate, only: :login
 
-  def show
-    user = User.find(params[:id])
-    render json: user
+  def current_user
+    begin
+      decoded_user = JWT.decode(
+        request.headers['Authorization'].split(' ').last, 
+        JWT_CONFIG[:secret_key], 
+        true, 
+        JWT_CONFIG[:decode_options]
+      ).first
+      user = User.find(decoded_user['sub'])
+      render json: {user: user} , status: 200 and return 
+    rescue 
+      render json: {
+        error_type: "invalid_user",
+        error_message: "User not found"
+      }, status: 400 and return
+    end
+    
   end
 
   def create
     user = User.new(valid_params)
 
-    if user.save!
+
+    begin
+      user.save!
       render json: {
         user: user
       }, status: 201 and return 
+    rescue StandardError => e
+      Rails.logger.error "Error creating user: #{e.message}"
+      render json: { error: "An error occured." }, status: :unprocessable_entity
     end
   end
 
@@ -31,9 +50,22 @@ class UsersController < ApplicationController
     params.permit(ParamValidation::SIGNUP_PARAMS.map { |x| x.values.first })
   end
 
+  def valid_email_format?
+    regex = /\A[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\z/
+    regex.match(params[:email].strip)
+  end
+
+  def valid_password_length?
+    params[:password].length >= 8
+  end
+
   def validate_signup_request
     error_type, error_message = if user_exists
       ["existing_user", user_exists_message ]
+    elsif !valid_email_format?
+      ["invalid_email", "Email format is invalid"  ]
+    elsif !valid_password_length?
+      ["invalid_password", "Password must be at least 8 characters long"]
     end
 
     if error_type && error_message

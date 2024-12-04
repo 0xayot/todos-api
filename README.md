@@ -46,3 +46,4 @@ I am assumming this is a new project from scratch so I can decide how to structu
 - We can add a user serializer that generates the the json outputs for user objects. See the example below.
 - We can choose to use regex to properly validate the inputs for emails e.t.c
 - We can also choose to use redis to cache user and task values.
+- Configuring APM software (Sentry, Datadog) to keep logs.

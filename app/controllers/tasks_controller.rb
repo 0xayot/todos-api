@@ -1,22 +1,41 @@
 class TasksController < ApplicationController
   include JwtAuthenticatable
 
+  DEFAULT_LIMIT = 25
+
   def index
-    tasks = Task.where(user_id: current_user.id)
+    limit = params[:limit] || DEFAULT_LIMIT
+    page = params[:page] || 1
+    filter = params[:completed]
 
-    render json: {"tasks": tasks}
-  end
+    query_obj = {user_id: current_user.id}
 
-  def uncompleted_tasks
-    tasks = Task.all.where(completed: false)
+    if filter.present?
+      if ['true', 'false'].include?(filter.downcase)
+        query_obj[:completed] = ActiveModel::Type::Boolean.new.cast(filter)
+      else
+        render json: { error: "Invalid filter value. Must be 'true' or 'false'." }, status: :unprocessable_entity and return
+      end
+    end
 
-    render json: {"tasks": tasks}
-  end
+    begin
+      tasks = Task.where(query_obj).limit(limit).offset((page.to_i - 1) * limit.to_i)
 
-  def completed_tasks
-    tasks = Task.all.where(completed: true)
-
-    render json: {"tasks": tasks}
+      total_count = Task.where(query_obj).count
+      total_pages = (total_count.to_f / limit.to_f).ceil
+  
+      render json: {
+        tasks: tasks,
+        pagination: {
+          current_page: page,
+          total_pages: total_pages,
+          total_count: total_count,
+          limit: limit
+        }
+      }
+    rescue 
+      render json: { error: "An error occured retrieving tasks" }, status: 500
+    end
   end
 
   def show
@@ -31,13 +50,14 @@ class TasksController < ApplicationController
 
   def create
     task = Task.new(valid_create_params)
-    pp task
     task.user_id = current_user.id
 
-    if task.save
+    begin
+      task.save
       render json: task
-    else
-      render json: task.errors
+    rescue StandardError => e
+      Rails.logger.error "Error creating task: #{e.message}"
+      render json: { error: "Error creating task." }, status: 500
     end
   end
 
@@ -50,10 +70,13 @@ class TasksController < ApplicationController
       task_data[:title] = valid_update_params[:title] if valid_update_params[:title]
       task_data[:note] = valid_update_params[:note] if valid_update_params[:note]
   
-      if task.update!(task_data)
+
+      begin
+        task.update!(task_data)
         render json: task.reload
-      else
-        render json: task.errors
+      rescue StandardError => e
+        Rails.logger.error "Error updating task: #{e.message}"
+        render json: { error: "Error updating task." }, status: 500
       end
     else
       render json: { error: "Task not found" }, status: 404
@@ -69,7 +92,7 @@ class TasksController < ApplicationController
         render json: { message: "Task successfully deleted" }, status: :ok
       rescue StandardError => e
         Rails.logger.error "Error deleting task: #{e.message}"
-        render json: { error: "Task could not be deleted." }, status: :unprocessable_entity
+        render json: { error: "Task could not be deleted." }, status: 500
       end
     else
       render json: { error: "Task not found" }, status: :not_found
