@@ -6,7 +6,7 @@ class TasksController < ApplicationController
   def index
     limit = params[:limit] || DEFAULT_LIMIT
     page = params[:page] || 1
-    filter = params[:filter]
+    filter = params[:completed]
 
     query_obj = {user_id: current_user.id}
 
@@ -18,21 +18,24 @@ class TasksController < ApplicationController
       end
     end
 
-    tasks = Task.where(query_obj).limit(limit).offset((page.to_i - 1) * limit.to_i)
+    begin
+      tasks = Task.where(query_obj).limit(limit).offset((page.to_i - 1) * limit.to_i)
 
-
-    total_count = Task.where(user_id: current_user.id).count
-    total_pages = (total_count.to_f / limit.to_f).ceil
-
-    render json: {
-      tasks: tasks,
-      pagination: {
-        current_page: page,
-        total_pages: total_pages,
-        total_count: total_count,
-        limit: limit
+      total_count = Task.where(query_obj).count
+      total_pages = (total_count.to_f / limit.to_f).ceil
+  
+      render json: {
+        tasks: tasks,
+        pagination: {
+          current_page: page,
+          total_pages: total_pages,
+          total_count: total_count,
+          limit: limit
+        }
       }
-    }
+    rescue 
+      render json: { error: "An error occured retrieving tasks" }, status: 500
+    end
   end
 
   def show
