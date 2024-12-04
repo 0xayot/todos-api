@@ -1,21 +1,38 @@
 class TasksController < ApplicationController
   include JwtAuthenticatable
 
+  DEFAULT_LIMIT = 25
+
   def index
-    tasks = Task.where(user_id: current_user.id)
+    limit = params[:limit] || DEFAULT_LIMIT
+    page = params[:page] || 1
+    filter = params[:filter]
 
-    render json: {"tasks": tasks}
-  end
+    query_obj = {user_id: current_user.id}
 
-  def uncompleted_tasks
-    tasks = Task.all.where(completed: false)
-    render json: {"tasks": tasks}
-  end
+    if filter.present?
+      if ['true', 'false'].include?(filter.downcase)
+        query_obj[:completed] = ActiveModel::Type::Boolean.new.cast(filter)
+      else
+        render json: { error: "Invalid filter value. Must be 'true' or 'false'." }, status: :unprocessable_entity and return
+      end
+    end
 
-  def completed_tasks
-    tasks = Task.all.where(completed: true)
+    tasks = Task.where(query_obj).limit(limit).offset((page.to_i - 1) * limit.to_i)
 
-    render json: {"tasks": tasks}
+
+    total_count = Task.where(user_id: current_user.id).count
+    total_pages = (total_count.to_f / limit.to_f).ceil
+
+    render json: {
+      tasks: tasks,
+      pagination: {
+        current_page: page,
+        total_pages: total_pages,
+        total_count: total_count,
+        limit: limit
+      }
+    }
   end
 
   def show
