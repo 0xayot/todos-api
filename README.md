@@ -47,3 +47,143 @@ I am assumming this is a new project from scratch so I can decide how to structu
 - We can choose to use regex to properly validate the inputs for emails e.t.c
 - We can also choose to use redis to cache user and task values.
 - Configuring APM software (Sentry, Datadog) to keep logs.
+
+## Routes
+
+- ## Users
+
+  - `POST /Users`
+
+    ```request
+      {
+        "email": "teowast@gmail.com",
+        "password": "abc123ABC!@#"
+      }
+    ```
+
+    ```
+      {
+        "user": {
+          "id": 12,
+          "email": "teowast@gmail.com",
+          "created_at": "2024-12-04T23:05:45.493Z"
+        }
+      }
+    ```
+
+  - `POST /login`
+    ```request
+    {
+    "email": "teowast@gmail.com",
+    "password": "abc123ABC!@#"
+    }
+
+    ````
+
+    ``` 200 ok
+      {
+        "token": "some-token
+      }
+    ````
+
+  - `GET /current_user` `Authenticated`
+
+  Headers
+
+  ```
+    {
+      "Authorization": "Bearer token-from-login"
+    }
+  ```
+
+  ```
+    {
+      "user": {
+        "id": 12,
+        "email": "teowast@gmail.com",
+        "created_at": "2024-12-04T23:05:45.493Z"
+      }
+    }
+  ```
+
+- ## Tasks `Authenticated`
+
+  - `GET /tasks?completed=false&limit=3&page=2`
+
+  ```
+    {
+      "tasks": [
+            {
+          "id": 3,
+          "title": "note 3",
+          "completed": false,
+          "note": "we want to edit some other",
+          "created_at": "2024-12-04T12:55:24.721Z"
+        },
+      ]
+      "pagination": {
+        "current_page": 1,
+        "total_pages": 1,
+        "total_count": 5,
+        "limit": 25
+      }
+    }
+  ```
+
+  - `GET /tasks/:id`
+
+  ```
+    {
+      "tasks": {
+        "id": 3,
+        "title": "note 3",
+        "completed": false,
+        "note": "we want to edit some other",
+        "created_at": "2024-12-04T12:55:24.721Z"
+      }
+    }
+  ```
+
+  - `POST /tasks/:id`
+
+  ```Request
+    {
+      "title": "note 3",
+      "note": "we won"
+      "completed": true #optional
+    }
+  ```
+
+  ```
+    {
+      "tasks": {
+        "id": 3,
+        "title": "note 3",
+        "completed": false,
+        "note": "we want to edit some other",
+        "created_at": "2024-12-04T12:55:24.721Z"
+      }
+    }
+  ```
+
+  - `PUT /tasks/:id`
+
+  ```Request
+    {
+      "title": "note 3",
+      "note": "we want to edit some other"  #optional
+      "completed": true #optional
+    }
+  ```
+
+  ```
+    {
+      "tasks": {
+        "id": 3,
+        "title": "note 3",
+        "completed": false,
+        "note": "we want to edit some other",
+        "created_at": "2024-12-04T12:55:24.721Z"
+      }
+    }
+  ```

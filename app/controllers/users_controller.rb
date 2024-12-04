@@ -45,7 +45,7 @@ class UsersController < ApplicationController
   end
 
 
-  # private
+  private
   def valid_params
     params.permit(ParamValidation::SIGNUP_PARAMS.map { |x| x.values.first })
   end
@@ -59,6 +59,12 @@ class UsersController < ApplicationController
     params[:password].length >= 8
   end
 
+  def valid_password?
+    password = params[:password]
+    password.match(/[A-Z]/) && password.match(/[a-z]/) && password.match(/\d/) && password.match(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/)
+  end
+  
+
   def validate_signup_request
     error_type, error_message = if user_exists
       ["existing_user", user_exists_message ]
@@ -66,6 +72,8 @@ class UsersController < ApplicationController
       ["invalid_email", "Email format is invalid"  ]
     elsif !valid_password_length?
       ["invalid_password", "Password must be at least 8 characters long"]
+    elsif !valid_password?
+      ["invalid_password", "Password must have one uppercase letter, one lowercase letter, one digit, and one special character"]
     end
 
     if error_type && error_message
