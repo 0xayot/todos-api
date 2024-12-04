@@ -10,4 +10,16 @@ class User < ApplicationRecord
   def authenticate(password)
     valid_for_authentication? { valid_password?(password) }
   end
+
+  def json_attributes
+    {
+      id: id,
+      email: email,
+      created_at: created_at
+    }
+  end
+
+  def as_json(options = {})
+    json_attributes
+  end
 end

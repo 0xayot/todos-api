@@ -9,7 +9,6 @@ class TasksController < ApplicationController
 
   def uncompleted_tasks
     tasks = Task.all.where(completed: false)
-
     render json: {"tasks": tasks}
   end
 
@@ -31,13 +30,14 @@ class TasksController < ApplicationController
 
   def create
     task = Task.new(valid_create_params)
-    pp task
     task.user_id = current_user.id
 
-    if task.save
+    begin
+      task.save
       render json: task
-    else
-      render json: task.errors
+    rescue StandardError => e
+      Rails.logger.error "Error creating task: #{e.message}"
+      render json: { error: "Error creating task." }, status: 500
     end
   end
 
@@ -50,10 +50,13 @@ class TasksController < ApplicationController
       task_data[:title] = valid_update_params[:title] if valid_update_params[:title]
       task_data[:note] = valid_update_params[:note] if valid_update_params[:note]
   
-      if task.update!(task_data)
+
+      begin
+        task.update!(task_data)
         render json: task.reload
-      else
-        render json: task.errors
+      rescue StandardError => e
+        Rails.logger.error "Error updating task: #{e.message}"
+        render json: { error: "Error updating task." }, status: 500
       end
     else
       render json: { error: "Task not found" }, status: 404
@@ -69,7 +72,7 @@ class TasksController < ApplicationController
         render json: { message: "Task successfully deleted" }, status: :ok
       rescue StandardError => e
         Rails.logger.error "Error deleting task: #{e.message}"
-        render json: { error: "Task could not be deleted." }, status: :unprocessable_entity
+        render json: { error: "Task could not be deleted." }, status: 500
       end
     else
       render json: { error: "Task not found" }, status: :not_found

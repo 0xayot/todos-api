@@ -1,6 +1,6 @@
 Rails.application.routes.draw do
   devise_for :users, skip: :all
-  resources :users, only: [:show, :create]
+  resources :users, only: [:create]
 
   resources :tasks, only: [:index, :show, :create, :update, :destroy] do
     collection do
@@ -9,5 +9,6 @@ Rails.application.routes.draw do
     end
   end
 
+  get '/current_user', to: 'users#current_user'
   post 'login', to: 'users#login'
 end
